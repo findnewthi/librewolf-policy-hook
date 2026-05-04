@@ -1,0 +1,1 @@
+# librewolf-policy-hook
