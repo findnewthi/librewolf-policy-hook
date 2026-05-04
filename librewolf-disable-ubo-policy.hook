@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = librewolf
+Target = librewolf-bin
+
+[Action]
+Description = Disable LibreWolf policy-managed uBlock Origin auto-install
+When = PostTransaction
+Depends = jq
+Exec = /usr/local/bin/librewolf-disable-ubo-policy

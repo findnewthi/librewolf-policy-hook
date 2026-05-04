@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+patch_policy() {
+  policy_file=$1
+
+  [ -f "$policy_file" ] || return 0
+
+  tmp_file=$(mktemp "${policy_file}.tmp.XXXXXX")
+  trap 'rm -f "$tmp_file"' HUP INT TERM EXIT
+
+  jq '
+    .policies.ExtensionSettings["uBlock0@raymondhill.net"] = {
+      installation_mode: "allowed"
+    }
+  ' "$policy_file" > "$tmp_file"
+
+  if ! jq empty "$tmp_file" >/dev/null 2>&1; then
+    echo "librewolf-disable-ubo-policy: generated invalid JSON for $policy_file" >&2
+    exit 1
+  fi
+
+  chmod --reference="$policy_file" "$tmp_file"
+  chown --reference="$policy_file" "$tmp_file"
+  mv -f "$tmp_file" "$policy_file"
+  trap - HUP INT TERM EXIT
+
+  echo "librewolf-disable-ubo-policy: patched $policy_file"
+}
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "librewolf-disable-ubo-policy: jq is required" >&2
+  exit 1
+fi
+
+patch_policy /usr/lib/librewolf/distribution/policies.json
+
+# If pacman keeps a package-provided update as .pacnew because policies.json is
+# listed as a backup file, patch that copy too so manual merges do not re-enable
+# uBlock Origin auto-installation.
+patch_policy /usr/lib/librewolf/distribution/policies.json.pacnew
